@@ -2,19 +2,17 @@ require 'rake'
 require 'rake/testtask'
 require 'cucumber/rake/task'
 
-test_files_pattern = 'test/rails_root/test/{unit,functional,other}/**/*_test.rb'
-
 namespace :test do
   Rake::TestTask.new(:all => ['generator:cleanup', 
                               'generator:generate']) do |task|
     task.libs << 'lib'
-    task.libs << File.join(File.dirname(__FILE__), "test/rails_root/test")
-    task.pattern = test_files_pattern
+    task.libs << "test"
+    task.pattern = 'test/**/*_test.rb'
     task.verbose = false
   end
 
   Cucumber::Rake::Task.new(:features) do |t|
-    t.cucumber_opts = "--format pretty"
+    t.cucumber_opts = "--format progress"
     t.feature_pattern = 'test/rails_root/features/*.feature'
   end
 end
@@ -35,14 +33,15 @@ namespace :generator do
       FileUtils.rm_rf(each)
     end
     FileUtils.rm_rf("test/rails_root/vendor/plugins/clearance")
-    system "mkdir -p test/rails_root/vendor/plugins/clearance"
-    system "cp -R generators test/rails_root/vendor/plugins/clearance"
+    FileUtils.mkdir_p("test/rails_root/vendor/plugins")
+    clearance_root = File.expand_path(File.dirname(__FILE__))
+    system("ln -s #{clearance_root} test/rails_root/vendor/plugins/clearance")
   end
 
   desc "Run the generator on the tests"
   task :generate do
     generators.each do |generator|
-      system "cd test/rails_root && ./script/generate #{generator}"
+      system "cd test/rails_root && ./script/generate #{generator} && rake db:migrate db:test:prepare"
     end
   end
 end
@@ -52,17 +51,17 @@ task :default => ['test:all', 'test:features']
 
 gem_spec = Gem::Specification.new do |gem_spec|
   gem_spec.name        = "clearance"
-  gem_spec.version     = "0.5.6"
-  gem_spec.summary     = "Rails authentication for developers who write tests."
+  gem_spec.version     = "0.6.1"
+  gem_spec.summary     = "Rails authentication with email & password."
   gem_spec.email       = "support@thoughtbot.com"
   gem_spec.homepage    = "http://github.com/thoughtbot/clearance"
-  gem_spec.description = "Simple, complete Rails authentication scheme."
-  gem_spec.authors     = ["thoughtbot, inc.", "Dan Croak", "Mike Burns", 
-                          "Jason Morrison", "Eugene Bolshakov", "Josh Nichols",
-                          "Mike Breen", "Joe Ferris", "Bence Nagy", 
-                          "Marcel Görner", "Ben Mabey", "Tim Pope", 
-                          "Eloy Duran", "Mihai Anca", "Mark Cornick"]
-  gem_spec.files       = FileList["[A-Z]*", "{generators,lib,shoulda_macros,rails}/**/*"]
+  gem_spec.description = "Rails authentication with email & password."
+  gem_spec.authors     = ["Dan Croak", "Mike Burns", "Jason Morrison",
+                          "Joe Ferris", "Eugene Bolshakov", "Nick Quaranto",
+                          "Josh Nichols", "Mike Breen", "Marcel Görner",
+                          "Bence Nagy", "Ben Mabey", "Eloy Duran",
+                          "Tim Pope", "Mihai Anca", "Mark Cornick"]
+  gem_spec.files       = FileList["[A-Z]*", "{app,config,generators,lib,shoulda_macros,rails}/**/*"]
 end
 
 desc "Generate a gemspec file"
